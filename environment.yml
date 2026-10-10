@@ -1,0 +1,13 @@
+name: likeliness
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy
+  - opencv
+  - pillow
+  - pip
+  - pip:
+    - gradio>=4.0
+    - insightface
+    - onnxruntime
