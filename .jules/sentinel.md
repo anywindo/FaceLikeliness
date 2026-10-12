@@ -1,0 +1,4 @@
+## 2024-05-18 - Prevent DoS via Large Image Uploads & Prevent Info Leakage
+**Vulnerability:** The application allowed uploading NumPy image arrays of unlimited dimensions, posing a Denial of Service (DoS) risk through memory exhaustion. Additionally, raw exception messages (`str(e)`) were being leaked to the user UI upon image processing failures, potentially exposing internal paths or state.
+**Learning:** In machine learning/image processing APIs, input dimension limits are crucial as libraries like OpenCV/Pillow can consume massive amounts of memory for gigapixel images. Error boundaries must distinguish between safe-for-user messages and internal logs.
+**Prevention:** Implement a strict `MAX_DIMENSION` (e.g., 4096x4096) check on all incoming image arrays before further processing. Sanitize all user-facing error outputs to use generic language while logging the full exception internally.
