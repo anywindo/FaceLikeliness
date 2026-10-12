@@ -1,0 +1,4 @@
+## 2025-02-14 - Fix Path Traversal and Error Leakage in Image Validation
+**Vulnerability:** The `validate_image` function accepted arbitrary local file paths (strings) and opened them using `Image.open()`. Additionally, error handlers exposed raw exceptions (`str(e)`) to the frontend in both `utils/image.py` and `app.py`.
+**Learning:** Functions designed to process uploads from a web interface should not accept local file paths as a fallback, as this allows Server-Side Request Forgery (SSRF) and Path Traversal if the UI boundaries are bypassed by a malicious API request. Furthermore, exposing internal exception details in UI elements violates the "Fail securely" principle and provides attackers with valuable reconnaissance information.
+**Prevention:** Strictly type-check inputs to only accept memory-based objects (like NumPy arrays or PIL Images) rather than file paths. Return generic, safe error messages to the user while logging detailed stack traces internally.
