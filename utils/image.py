@@ -35,7 +35,10 @@ def validate_image(image: Union[np.ndarray, Image.Image, str, None]) -> np.ndarr
             pil_img = pil_img.convert("RGB")
             return np.array(pil_img, dtype=np.uint8)
         except Exception as e:
-            raise ValueError(f"Unable to read image file: {str(e)}")
+            # SECURITY: Return generic error message to prevent leaking file paths or internal details
+            raise ValueError(
+                "Unable to read image file. The file may be corrupt or unsupported."
+            )
 
     # If image is a PIL Image
     if isinstance(image, Image.Image):
@@ -44,7 +47,10 @@ def validate_image(image: Union[np.ndarray, Image.Image, str, None]) -> np.ndarr
             image = image.convert("RGB")
             return np.array(image, dtype=np.uint8)
         except Exception as e:
-            raise ValueError(f"Error processing PIL image: {str(e)}")
+            # SECURITY: Return generic error message to prevent leaking internal details
+            raise ValueError(
+                "Error processing PIL image. The image format may be unsupported."
+            )
 
     # If image is a numpy array
     if isinstance(image, np.ndarray):
