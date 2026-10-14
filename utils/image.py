@@ -1,9 +1,12 @@
 """Image loading, validation, and preprocessing utilities."""
 
+import logging
 from typing import Union
 import cv2
 import numpy as np
 from PIL import Image, ImageOps
+
+logger = logging.getLogger(__name__)
 
 # Prevent decompression bombs
 Image.MAX_IMAGE_PIXELS = 16_777_216  # approx 4096x4096
@@ -35,7 +38,8 @@ def validate_image(image: Union[np.ndarray, Image.Image, str, None]) -> np.ndarr
             pil_img = pil_img.convert("RGB")
             return np.array(pil_img, dtype=np.uint8)
         except Exception as e:
-            raise ValueError(f"Unable to read image file: {str(e)}")
+            logger.error("Unable to read image file: %s", str(e))
+            raise ValueError("Unable to read image file.")
 
     # If image is a PIL Image
     if isinstance(image, Image.Image):
@@ -44,7 +48,8 @@ def validate_image(image: Union[np.ndarray, Image.Image, str, None]) -> np.ndarr
             image = image.convert("RGB")
             return np.array(image, dtype=np.uint8)
         except Exception as e:
-            raise ValueError(f"Error processing PIL image: {str(e)}")
+            logger.error("Error processing PIL image: %s", str(e))
+            raise ValueError("Error processing image.")
 
     # If image is a numpy array
     if isinstance(image, np.ndarray):
