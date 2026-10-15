@@ -29,13 +29,11 @@ class FaceComparator:
         a = emb_a.flatten()
         b = emb_b.flatten()
 
-        norm_a = np.linalg.norm(a)
-        norm_b = np.linalg.norm(b)
+        # ⚡ Bolt Optimization: Since embeddings are already L2 normalized unit vectors (ensured
+        # by FaceDetector and FaceEmbedder), their cosine similarity is mathematically equivalent
+        # to their dot product. This avoids redundant O(N) L2 norm computations.
+        cos_sim = float(np.dot(a, b))
 
-        if norm_a < 1e-10 or norm_b < 1e-10:
-            return 0.0
-
-        cos_sim = float(np.dot(a, b) / (norm_a * norm_b))
         # Clip to valid range due to numerical precision
         return float(np.clip(cos_sim, -1.0, 1.0))
 

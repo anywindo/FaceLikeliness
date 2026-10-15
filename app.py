@@ -33,9 +33,13 @@ def process_image(image: np.ndarray | None, label: str) -> Tuple[List[DetectedFa
 
     try:
         faces = detector.detect(image)
-    except Exception as e:
-        logger.error(f"Error analyzing {label}: {e}")
-        return [], gr.update(value=None, visible=False), "⚠️ Error: Failed to process image. Please try a different photo."
+    except Exception:
+        logger.exception("Error analyzing %s", label)
+        return (
+            [],
+            gr.update(value=None, visible=False),
+            "⚠️ Error: Failed to process image. Please try a different photo.",
+        )
 
     if not faces:
         return [], gr.update(value=None, visible=False), f"⚠️ No face detected in {label}. Please upload an image with a visible face."

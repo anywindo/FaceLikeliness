@@ -6,14 +6,14 @@ import numpy as np
 from PIL import Image, ImageOps
 
 
-def validate_image(image: Union[np.ndarray, Image.Image, str, None]) -> np.ndarray:
+def validate_image(image: Union[np.ndarray, Image.Image, None]) -> np.ndarray:
     """Validates and preprocesses an image for face detection.
 
-    Converts various input formats (NumPy array, PIL Image, or file path)
+    Converts various input formats (NumPy array or PIL Image)
     into a standard RGB NumPy array, handling color channels and EXIF orientation.
 
     Args:
-        image: The input image as a NumPy array (RGB), PIL Image, or filepath string.
+        image: The input image as a NumPy array (RGB) or PIL Image.
 
     Returns:
         np.ndarray: Preprocessed image in RGB uint8 format.
@@ -24,16 +24,6 @@ def validate_image(image: Union[np.ndarray, Image.Image, str, None]) -> np.ndarr
     if image is None:
         raise ValueError("No image provided. Please upload an image.")
 
-    # If image is a filepath
-    if isinstance(image, str):
-        try:
-            pil_img = Image.open(image)
-            pil_img = ImageOps.exif_transpose(pil_img)
-            pil_img = pil_img.convert("RGB")
-            return np.array(pil_img, dtype=np.uint8)
-        except Exception as e:
-            raise ValueError(f"Unable to read image file: {str(e)}")
-
     # If image is a PIL Image
     if isinstance(image, Image.Image):
         try:
@@ -41,7 +31,7 @@ def validate_image(image: Union[np.ndarray, Image.Image, str, None]) -> np.ndarr
             image = image.convert("RGB")
             return np.array(image, dtype=np.uint8)
         except Exception as e:
-            raise ValueError(f"Error processing PIL image: {str(e)}")
+            raise ValueError("Error processing PIL image. The image format may be unsupported or corrupted.")
 
     # If image is a numpy array
     if isinstance(image, np.ndarray):
