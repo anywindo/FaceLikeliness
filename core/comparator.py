@@ -26,13 +26,16 @@ class FaceComparator:
         Returns:
             float: Cosine similarity in range [-1.0, 1.0].
         """
-        # ⚡ Bolt: Fast path for already normalized embeddings.
-        # Since the embeddings are already L2 normalized during extraction,
-        # we compute the dot product directly to skip redundant O(N) norms and division.
-        # We flatten to ensure compatibility with 1D or 2D inputs.
         a = emb_a.flatten()
         b = emb_b.flatten()
-        cos_sim = float(np.dot(a, b))
+
+        norm_a = np.linalg.norm(a)
+        norm_b = np.linalg.norm(b)
+
+        if norm_a < 1e-10 or norm_b < 1e-10:
+            return 0.0
+
+        cos_sim = float(np.dot(a, b) / (norm_a * norm_b))
         # Clip to valid range due to numerical precision
         return float(np.clip(cos_sim, -1.0, 1.0))
 
@@ -83,9 +86,7 @@ class FaceComparator:
         else:
             return "High Similarity (Same Person)"
 
-    def generate_explanation(
-        self, cosine_sim: float, percentage: float, category: str
-    ) -> str:
+    def generate_explanation(self, cosine_sim: float, percentage: float, category: str) -> str:
         """Produces a transparent, responsible explanation of the similarity score.
 
         Args:
