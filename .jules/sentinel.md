@@ -1,9 +1,4 @@
-## 2024-05-18 - Prevent DoS via Large Image Uploads & Prevent Info Leakage
-**Vulnerability:** The application allowed uploading NumPy image arrays of unlimited dimensions, posing a Denial of Service (DoS) risk through memory exhaustion. Additionally, raw exception messages (`str(e)`) were being leaked to the user UI upon image processing failures, potentially exposing internal paths or state.
-**Learning:** In machine learning/image processing APIs, input dimension limits are crucial as libraries like OpenCV/Pillow can consume massive amounts of memory for gigapixel images. Error boundaries must distinguish between safe-for-user messages and internal logs.
-**Prevention:** Implement a strict `MAX_DIMENSION` (e.g., 4096x4096) check on all incoming image arrays before further processing. Sanitize all user-facing error outputs to use generic language while logging the full exception internally.
-
-## 2024-10-13 - [Denial of Service Prevention and Information Exposure]
-**Vulnerability:** The application was vulnerable to Denial of Service via Pillow decompression bombs and OOM via massive numpy arrays, and exposed internal error messages in the Gradio UI.
-**Learning:** Image processing endpoints must aggressively validate image dimensions to prevent memory exhaustion by deep learning models. Broad exception handling in web interfaces often leaks sensitive internal state.
-**Prevention:** Always enforce `Image.MAX_IMAGE_PIXELS` for PIL, check array shapes for NumPy, and catch generic Exceptions to return safe, generic error messages to the user while logging full details internally.
+## 2025-02-14 - Fix Path Traversal and Error Leakage in Image Validation
+**Vulnerability:** The `validate_image` function accepted arbitrary local file paths (strings) and opened them using `Image.open()`. Additionally, error handlers exposed raw exceptions (`str(e)`) to the frontend in both `utils/image.py` and `app.py`.
+**Learning:** Functions designed to process uploads from a web interface should not accept local file paths as a fallback, as this allows Server-Side Request Forgery (SSRF) and Path Traversal if the UI boundaries are bypassed by a malicious API request. Furthermore, exposing internal exception details in UI elements violates the "Fail securely" principle and provides attackers with valuable reconnaissance information.
+**Prevention:** Strictly type-check inputs to only accept memory-based objects (like NumPy arrays or PIL Images) rather than file paths. Return generic, safe error messages to the user while logging detailed stack traces internally.

@@ -5,18 +5,15 @@ import cv2
 import numpy as np
 from PIL import Image, ImageOps
 
-# Prevent decompression bombs
-Image.MAX_IMAGE_PIXELS = 16_777_216  # approx 4096x4096
 
-
-def validate_image(image: Union[np.ndarray, Image.Image, str, None]) -> np.ndarray:
+def validate_image(image: Union[np.ndarray, Image.Image, None]) -> np.ndarray:
     """Validates and preprocesses an image for face detection.
 
-    Converts various input formats (NumPy array, PIL Image, or file path)
+    Converts various input formats (NumPy array or PIL Image)
     into a standard RGB NumPy array, handling color channels and EXIF orientation.
 
     Args:
-        image: The input image as a NumPy array (RGB), PIL Image, or filepath string.
+        image: The input image as a NumPy array (RGB) or PIL Image.
 
     Returns:
         np.ndarray: Preprocessed image in RGB uint8 format.
@@ -27,16 +24,6 @@ def validate_image(image: Union[np.ndarray, Image.Image, str, None]) -> np.ndarr
     if image is None:
         raise ValueError("No image provided. Please upload an image.")
 
-    # If image is a filepath
-    if isinstance(image, str):
-        try:
-            pil_img = Image.open(image)
-            pil_img = ImageOps.exif_transpose(pil_img)
-            pil_img = pil_img.convert("RGB")
-            return np.array(pil_img, dtype=np.uint8)
-        except Exception as e:
-            raise ValueError(f"Unable to read image file: {str(e)}")
-
     # If image is a PIL Image
     if isinstance(image, Image.Image):
         try:
@@ -44,19 +31,12 @@ def validate_image(image: Union[np.ndarray, Image.Image, str, None]) -> np.ndarr
             image = image.convert("RGB")
             return np.array(image, dtype=np.uint8)
         except Exception as e:
-            raise ValueError(f"Error processing PIL image: {str(e)}")
+            raise ValueError("Error processing PIL image. The image format may be unsupported or corrupted.")
 
     # If image is a numpy array
     if isinstance(image, np.ndarray):
         if image.size == 0:
             raise ValueError("The provided image is empty.")
-
-        # Security: Prevent memory exhaustion (DoS) from overly large images
-        MAX_DIMENSION = 4096
-        if image.shape[0] > MAX_DIMENSION or image.shape[1] > MAX_DIMENSION:
-            raise ValueError(
-                f"Image exceeds maximum allowed dimension of {MAX_DIMENSION} pixels."
-            )
 
         # Ensure correct dtype
         if image.dtype != np.uint8:
@@ -79,9 +59,7 @@ def validate_image(image: Union[np.ndarray, Image.Image, str, None]) -> np.ndarr
                 # Already 3-channel (assumed RGB from Gradio)
                 pass
             else:
-                raise ValueError(
-                    f"Unsupported number of image channels: {image.shape[2]}"
-                )
+                raise ValueError(f"Unsupported number of image channels: {image.shape[2]}")
         else:
             raise ValueError(f"Invalid image array dimensions: {image.ndim}")
 
@@ -124,7 +102,7 @@ def create_thumbnail(
     crop = image[crop_y1:crop_y2, crop_x1:crop_x2]
     if crop.size == 0 or crop.shape[0] == 0 or crop.shape[1] == 0:
         # Fallback to direct bbox or blank image
-        crop = image[max(0, y1) : min(h_img, y2), max(0, x1) : min(w_img, x2)]
+        crop = image[max(0, y1):min(h_img, y2), max(0, x1):min(w_img, x2)]
         if crop.size == 0:
             return np.zeros((target_size[1], target_size[0], 3), dtype=np.uint8)
 
