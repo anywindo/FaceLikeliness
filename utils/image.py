@@ -5,6 +5,9 @@ import cv2
 import numpy as np
 from PIL import Image, ImageOps
 
+# Prevent decompression bombs
+Image.MAX_IMAGE_PIXELS = 16_777_216  # approx 4096x4096
+
 
 def validate_image(image: Union[np.ndarray, Image.Image, str, None]) -> np.ndarray:
     """Validates and preprocesses an image for face detection.
@@ -51,7 +54,9 @@ def validate_image(image: Union[np.ndarray, Image.Image, str, None]) -> np.ndarr
         # Security: Prevent memory exhaustion (DoS) from overly large images
         MAX_DIMENSION = 4096
         if image.shape[0] > MAX_DIMENSION or image.shape[1] > MAX_DIMENSION:
-            raise ValueError(f"Image exceeds maximum allowed dimension of {MAX_DIMENSION} pixels.")
+            raise ValueError(
+                f"Image exceeds maximum allowed dimension of {MAX_DIMENSION} pixels."
+            )
 
         # Ensure correct dtype
         if image.dtype != np.uint8:
@@ -74,7 +79,9 @@ def validate_image(image: Union[np.ndarray, Image.Image, str, None]) -> np.ndarr
                 # Already 3-channel (assumed RGB from Gradio)
                 pass
             else:
-                raise ValueError(f"Unsupported number of image channels: {image.shape[2]}")
+                raise ValueError(
+                    f"Unsupported number of image channels: {image.shape[2]}"
+                )
         else:
             raise ValueError(f"Invalid image array dimensions: {image.ndim}")
 
@@ -117,7 +124,7 @@ def create_thumbnail(
     crop = image[crop_y1:crop_y2, crop_x1:crop_x2]
     if crop.size == 0 or crop.shape[0] == 0 or crop.shape[1] == 0:
         # Fallback to direct bbox or blank image
-        crop = image[max(0, y1):min(h_img, y2), max(0, x1):min(w_img, x2)]
+        crop = image[max(0, y1) : min(h_img, y2), max(0, x1) : min(w_img, x2)]
         if crop.size == 0:
             return np.zeros((target_size[1], target_size[0], 3), dtype=np.uint8)
 

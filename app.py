@@ -18,7 +18,9 @@ from core.models import DetectedFace
 # Suppress external library deprecation warnings for clean console output
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 # Initialize model detector and comparator
@@ -26,22 +28,43 @@ detector = FaceDetector(model_name="buffalo_l")
 comparator = FaceComparator()
 
 
-def process_image(image: np.ndarray | None, label: str) -> Tuple[List[DetectedFace], Any, str]:
+def process_image(
+    image: np.ndarray | None, label: str
+) -> Tuple[List[DetectedFace], Any, str]:
     """Detects faces in an uploaded image and toggles selection gallery when multiple faces are present."""
     if image is None:
         return [], gr.update(value=None, visible=False), ""
 
     try:
         faces = detector.detect(image)
-    except Exception as e:
-        logger.error(f"Error analyzing {label}: {e}")
-        return [], gr.update(value=None, visible=False), f"⚠️ Error processing {label}. Please ensure the image is valid."
+    except ValueError as e:
+        logger.warning(f"Validation error in {label}: {e}")
+        return (
+            [],
+            gr.update(value=None, visible=False),
+            f"⚠️ Error processing {label}. Please ensure the image is valid.",
+        )
+    except Exception:
+        logger.error(f"Error analyzing {label}", exc_info=True)
+        return (
+            [],
+            gr.update(value=None, visible=False),
+            "⚠️ An unexpected error occurred while analyzing the image.",
+        )
 
     if not faces:
-        return [], gr.update(value=None, visible=False), f"⚠️ No face detected in {label}. Please upload an image with a visible face."
+        return (
+            [],
+            gr.update(value=None, visible=False),
+            f"⚠️ No face detected in {label}. Please upload an image with a visible face.",
+        )
 
     if len(faces) == 1:
-        return faces, gr.update(value=None, visible=False), f"✅ 1 face detected in {label}."
+        return (
+            faces,
+            gr.update(value=None, visible=False),
+            f"✅ 1 face detected in {label}.",
+        )
     else:
         gallery_items = [(f.thumbnail, f"Face #{i+1}") for i, f in enumerate(faces)]
         return (
@@ -86,10 +109,14 @@ def compare(
         raise gr.Error("Please upload both Photo A and Photo B before comparing.")
 
     if not faces_a:
-        raise gr.Error("No face detected in Photo A. Please upload an image with a visible face.")
+        raise gr.Error(
+            "No face detected in Photo A. Please upload an image with a visible face."
+        )
 
     if not faces_b:
-        raise gr.Error("No face detected in Photo B. Please upload an image with a visible face.")
+        raise gr.Error(
+            "No face detected in Photo B. Please upload an image with a visible face."
+        )
 
     target_a = faces_a[max(0, min(idx_a, len(faces_a) - 1))]
     target_b = faces_b[max(0, min(idx_b, len(faces_b) - 1))]
@@ -110,46 +137,44 @@ def compare(
     )
 
     return (
-        gr.update(visible=True),   # results_row visible
-        target_a.thumbnail,        # crop A
-        label_dict,                # similarity label bar
+        gr.update(visible=True),  # results_row visible
+        target_a.thumbnail,  # crop A
+        label_dict,  # similarity label bar
         result.cosine_similarity,  # raw cosine number
-        summary,                   # summary text
-        target_b.thumbnail,        # crop B
+        summary,  # summary text
+        target_b.thumbnail,  # crop B
     )
 
 
 def reset() -> Tuple[Any, ...]:
     """Resets all interface inputs and outputs."""
     return (
-        None,                                   # img_a
-        None,                                   # img_b
-        [],                                     # faces_a
-        [],                                     # faces_b
-        0,                                      # idx_a
-        0,                                      # idx_b
-        gr.update(value=None, visible=False),   # gallery_a
-        gr.update(value=None, visible=False),   # gallery_b
-        "",                                     # status_a
-        "",                                     # status_b
-        gr.update(visible=False),               # results_row
-        None,                                   # crop_a
-        None,                                   # score_label
-        None,                                   # cosine_box
-        "",                                     # summary_box
-        None,                                   # crop_b
+        None,  # img_a
+        None,  # img_b
+        [],  # faces_a
+        [],  # faces_b
+        0,  # idx_a
+        0,  # idx_b
+        gr.update(value=None, visible=False),  # gallery_a
+        gr.update(value=None, visible=False),  # gallery_b
+        "",  # status_a
+        "",  # status_b
+        gr.update(visible=False),  # results_row
+        None,  # crop_a
+        None,  # score_label
+        None,  # cosine_box
+        "",  # summary_box
+        None,  # crop_b
     )
 
 
 def build_app() -> gr.Blocks:
     """Builds a classic, clean Gradio interface."""
     with gr.Blocks(title="Facial Similarity Comparison") as demo:
-        gr.Markdown(
-            """
+        gr.Markdown("""
             # 🔍 Facial Similarity Comparison
             Upload two photos to compare facial similarity using **InsightFace (ArcFace)** deep feature embeddings.
-            """
-        )
+            """)
 
         # Internal selection states
         state_faces_a = gr.State(value=[])
@@ -160,7 +185,9 @@ def build_app() -> gr.Blocks:
         # Two-column Input Row
         with gr.Row():
             with gr.Column():
-                img_a = gr.Image(label="Photo A", type="numpy", sources=["upload", "clipboard"])
+                img_a = gr.Image(
+                    label="Photo A", type="numpy", sources=["upload", "clipboard"]
+                )
                 status_a = gr.Markdown("")
                 gallery_a = gr.Gallery(
                     label="Detected Faces in Photo A (Click to choose)",
@@ -171,7 +198,9 @@ def build_app() -> gr.Blocks:
                 )
 
             with gr.Column():
-                img_b = gr.Image(label="Photo B", type="numpy", sources=["upload", "clipboard"])
+                img_b = gr.Image(
+                    label="Photo B", type="numpy", sources=["upload", "clipboard"]
+                )
                 status_b = gr.Markdown("")
                 gallery_b = gr.Gallery(
                     label="Detected Faces in Photo B (Click to choose)",
@@ -193,16 +222,19 @@ def build_app() -> gr.Blocks:
 
             with gr.Column(scale=2):
                 score_label = gr.Label(label="Similarity Metric")
-                cosine_box = gr.Number(label="Raw Cosine Similarity (-1.0 to +1.0)", precision=4)
-                summary_box = gr.Textbox(label="Assessment Summary", lines=3, interactive=False)
+                cosine_box = gr.Number(
+                    label="Raw Cosine Similarity (-1.0 to +1.0)", precision=4
+                )
+                summary_box = gr.Textbox(
+                    label="Assessment Summary", lines=3, interactive=False
+                )
 
             with gr.Column(scale=1):
                 crop_b = gr.Image(label="Face B (Analyzed Crop)", interactive=False)
 
         # Classic Information Accordion
         with gr.Accordion("ℹ️ Model Information & Threshold Reference", open=False):
-            gr.Markdown(
-                """
+            gr.Markdown("""
                 ### Calibrated Threshold Reference
                 | Category | Raw Cosine | Calibrated Score | Interpretation |
                 |---|---|---|---|
@@ -218,8 +250,7 @@ def build_app() -> gr.Blocks:
                 ### Responsible Use & Privacy
                 - All processing executes **locally in-memory** on your machine. No photos or face embeddings are stored.
                 - The percentage score is an algorithmic distance measurement between feature vectors, **not** a calibrated probability of identity match or legal identity verification.
-                """
-            )
+                """)
 
         # ---------------- Event Bindings ----------------
         img_a.upload(
