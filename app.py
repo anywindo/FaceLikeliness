@@ -73,18 +73,16 @@ def clear_photo_b() -> Tuple[List[Any], Any, str]:
     return [], gr.update(value=None, visible=False), ""
 
 
+# OPTIMIZATION: Removed raw img_a and img_b inputs to prevent Gradio from serializing
+# and uploading massive high-res image payloads over the network on every comparison.
+# State variables (faces_a, faces_b) are sufficient to perform the comparison.
 def compare(
-    img_a: np.ndarray | None,
-    img_b: np.ndarray | None,
     faces_a: List[DetectedFace],
     faces_b: List[DetectedFace],
     idx_a: int,
     idx_b: int,
 ) -> Tuple[Any, Any, Any, Any, Any, Any]:
     """Compares the selected faces and returns classic Gradio output components."""
-    if img_a is None or img_b is None:
-        raise gr.Error("Please upload both Photo A and Photo B before comparing.")
-
     if not faces_a:
         raise gr.Error("No face detected in Photo A. Please upload an image with a visible face.")
 
@@ -258,8 +256,6 @@ def build_app() -> gr.Blocks:
         compare_btn.click(
             fn=compare,
             inputs=[
-                img_a,
-                img_b,
                 state_faces_a,
                 state_faces_b,
                 state_idx_a,
