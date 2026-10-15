@@ -19,7 +19,6 @@ from utils.image import validate_image, create_thumbnail
 from utils.gauge import render_similarity_gauge
 
 
-
 class TestLikelinessPipeline(unittest.TestCase):
     """Test suite covering data models, preprocessing, embedding, and comparison."""
 
@@ -47,6 +46,19 @@ class TestLikelinessPipeline(unittest.TestCase):
         # None should raise ValueError
         with self.assertRaises(ValueError):
             validate_image(None)
+
+    def test_image_validation_exception_safety(self):
+        """Tests that invalid file paths do not leak sensitive information."""
+        sensitive_path = "/etc/passwd_sensitive_data"
+        with self.assertRaises(ValueError) as context:
+            validate_image(sensitive_path)
+
+        error_msg = str(context.exception)
+        self.assertNotIn(sensitive_path, error_msg)
+        self.assertNotIn("Errno 2", error_msg)
+        self.assertEqual(
+            error_msg, "Unable to read image file. It may be corrupt or unsupported."
+        )
 
     def test_thumbnail_generation(self):
         """Tests padded thumbnail creation bounds and sizing."""
