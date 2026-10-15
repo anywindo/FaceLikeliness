@@ -1,3 +1,7 @@
+## 2024-05-24 - [Information Leakage and DoS Mitigation]
+**Vulnerability:** The application was catching exceptions in `app.py` and returning `str(e)` directly to the UI, which could leak internal file paths or stack details. Furthermore, `utils/image.py` processed any numpy array size, leaving it vulnerable to memory exhaustion / DoS.
+**Learning:** In Gradio applications that handle uploads, raw exception strings and unconstrained input bounds often slip through because the framework automatically surfaces returned strings.
+**Prevention:** Always mask raw exception strings with generic UI messages and log the detailed error internally. Enforce strict memory bounds (e.g., maximum resolution limits) on image processing entry points.
 ## 2025-02-14 - Fix Path Traversal and Error Leakage in Image Validation
 **Vulnerability:** The `validate_image` function accepted arbitrary local file paths (strings) and opened them using `Image.open()`. Additionally, error handlers exposed raw exceptions (`str(e)`) to the frontend in both `utils/image.py` and `app.py`.
 **Learning:** Functions designed to process uploads from a web interface should not accept local file paths as a fallback, as this allows Server-Side Request Forgery (SSRF) and Path Traversal if the UI boundaries are bypassed by a malicious API request. Furthermore, exposing internal exception details in UI elements violates the "Fail securely" principle and provides attackers with valuable reconnaissance information.

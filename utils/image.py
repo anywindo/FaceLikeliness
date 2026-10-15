@@ -38,6 +38,12 @@ def validate_image(image: Union[np.ndarray, Image.Image, None]) -> np.ndarray:
         if image.size == 0:
             raise ValueError("The provided image is empty.")
 
+        # Protect against excessively large images (DoS mitigation)
+        # Limit to 16 Megapixels (e.g., 4000x4000)
+        max_pixels = 4000 * 4000
+        if image.shape[0] * image.shape[1] > max_pixels:
+            raise ValueError(f"Image exceeds maximum allowed resolution ({max_pixels} pixels).")
+
         # Ensure correct dtype
         if image.dtype != np.uint8:
             if np.issubdtype(image.dtype, np.floating) and image.max() <= 1.0:
