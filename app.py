@@ -39,8 +39,12 @@ def process_image(
         faces = detector.detect(image)
     except ValueError as e:
         logger.warning(f"Validation error in {label}: {e}")
-        return [], gr.update(value=None, visible=False), f"⚠️ Error: {str(e)}"
-    except Exception as e:
+        return (
+            [],
+            gr.update(value=None, visible=False),
+            f"⚠️ Error processing {label}. Please ensure the image is valid.",
+        )
+    except Exception:
         logger.error(f"Error analyzing {label}", exc_info=True)
         return (
             [],

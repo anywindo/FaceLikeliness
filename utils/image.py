@@ -51,10 +51,11 @@ def validate_image(image: Union[np.ndarray, Image.Image, str, None]) -> np.ndarr
         if image.size == 0:
             raise ValueError("The provided image is empty.")
 
-        # Prevent memory exhaustion / OOM
-        if image.shape[0] > 4096 or image.shape[1] > 4096:
+        # Security: Prevent memory exhaustion (DoS) from overly large images
+        MAX_DIMENSION = 4096
+        if image.shape[0] > MAX_DIMENSION or image.shape[1] > MAX_DIMENSION:
             raise ValueError(
-                "Image dimensions exceed the maximum allowed size (4096px)."
+                f"Image exceeds maximum allowed dimension of {MAX_DIMENSION} pixels."
             )
 
         # Ensure correct dtype
