@@ -1,3 +1,3 @@
-## 2023-10-27 - Redundant L2 Norm Computations on Normalized Embeddings
-**Learning:** In pipelines using models like InsightFace (ArcFace), face embeddings are almost always L2-normalized upon extraction (e.g., returning unit vectors). Recomputing the L2 norm of these vectors before calculating cosine similarity adds unnecessary O(N) operations.
-**Action:** When working with normalized embeddings, replace the full cosine similarity formula (dot product divided by magnitudes) with a simple dot product (`np.dot(a, b)`).
+## 2025-02-23 - Gradio Network Payload Bottleneck
+**Learning:** In Gradio applications, passing raw `Image` components to downstream event handlers forces the client to serialize and re-upload the full high-res image over the network on every action (like clicking a compare button).
+**Action:** Use lightweight extracted states (e.g., `gr.State(value=True)` for presence tracking) in event handlers instead of passing the raw image components to prevent massive, unnecessary network payloads.
