@@ -24,25 +24,35 @@ def validate_image(image: Union[np.ndarray, Image.Image, None]) -> np.ndarray:
     if image is None:
         raise ValueError("No image provided. Please upload an image.")
 
+    # Protect against excessively large images (DoS mitigation)
+    # Limit to 16 Megapixels (e.g., 4000x4000)
+    max_pixels = 4000 * 4000
+
     # If image is a PIL Image
     if isinstance(image, Image.Image):
+        if image.width * image.height > max_pixels:
+            raise ValueError(
+                f"Image exceeds maximum allowed resolution ({max_pixels} pixels)."
+            )
+
         try:
             image = ImageOps.exif_transpose(image)
             image = image.convert("RGB")
             return np.array(image, dtype=np.uint8)
         except Exception as e:
-            raise ValueError("Error processing PIL image. The image format may be unsupported or corrupted.")
+            raise ValueError(
+                "Error processing PIL image. The image format may be unsupported or corrupted."
+            )
 
     # If image is a numpy array
     if isinstance(image, np.ndarray):
         if image.size == 0:
             raise ValueError("The provided image is empty.")
 
-        # Protect against excessively large images (DoS mitigation)
-        # Limit to 16 Megapixels (e.g., 4000x4000)
-        max_pixels = 4000 * 4000
         if image.shape[0] * image.shape[1] > max_pixels:
-            raise ValueError(f"Image exceeds maximum allowed resolution ({max_pixels} pixels).")
+            raise ValueError(
+                f"Image exceeds maximum allowed resolution ({max_pixels} pixels)."
+            )
 
         # Ensure correct dtype
         if image.dtype != np.uint8:
@@ -65,7 +75,9 @@ def validate_image(image: Union[np.ndarray, Image.Image, None]) -> np.ndarray:
                 # Already 3-channel (assumed RGB from Gradio)
                 pass
             else:
-                raise ValueError(f"Unsupported number of image channels: {image.shape[2]}")
+                raise ValueError(
+                    f"Unsupported number of image channels: {image.shape[2]}"
+                )
         else:
             raise ValueError(f"Invalid image array dimensions: {image.ndim}")
 
@@ -108,7 +120,7 @@ def create_thumbnail(
     crop = image[crop_y1:crop_y2, crop_x1:crop_x2]
     if crop.size == 0 or crop.shape[0] == 0 or crop.shape[1] == 0:
         # Fallback to direct bbox or blank image
-        crop = image[max(0, y1):min(h_img, y2), max(0, x1):min(w_img, x2)]
+        crop = image[max(0, y1) : min(h_img, y2), max(0, x1) : min(w_img, x2)]
         if crop.size == 0:
             return np.zeros((target_size[1], target_size[0], 3), dtype=np.uint8)
 
