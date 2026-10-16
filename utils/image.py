@@ -24,8 +24,14 @@ def validate_image(image: Union[np.ndarray, Image.Image, None]) -> np.ndarray:
     if image is None:
         raise ValueError("No image provided. Please upload an image.")
 
+    # Protect against excessively large images (DoS mitigation)
+    # Limit to 16 Megapixels (e.g., 4000x4000)
+    max_pixels = 4000 * 4000
+
     # If image is a PIL Image
     if isinstance(image, Image.Image):
+        if image.width * image.height > max_pixels:
+            raise ValueError(f"Image exceeds maximum allowed resolution ({max_pixels} pixels).")
         try:
             image = ImageOps.exif_transpose(image)
             image = image.convert("RGB")
@@ -38,9 +44,6 @@ def validate_image(image: Union[np.ndarray, Image.Image, None]) -> np.ndarray:
         if image.size == 0:
             raise ValueError("The provided image is empty.")
 
-        # Protect against excessively large images (DoS mitigation)
-        # Limit to 16 Megapixels (e.g., 4000x4000)
-        max_pixels = 4000 * 4000
         if image.shape[0] * image.shape[1] > max_pixels:
             raise ValueError(f"Image exceeds maximum allowed resolution ({max_pixels} pixels).")
 
