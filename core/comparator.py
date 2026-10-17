@@ -84,7 +84,9 @@ class FaceComparator:
         else:
             return "High Similarity (Same Person)"
 
-    def generate_explanation(self, cosine_sim: float, percentage: float, category: str) -> str:
+    def generate_explanation(
+        self, cosine_sim: float, percentage: float, category: str
+    ) -> str:
         """Produces a transparent, responsible explanation of the similarity score.
 
         Args:

@@ -3,7 +3,9 @@
 import math
 
 
-def render_similarity_gauge(similarity_percent: float, category: str, cosine_sim: float) -> str:
+def render_similarity_gauge(
+    similarity_percent: float, category: str, cosine_sim: float
+) -> str:
     """Generates a modern, responsive HTML/SVG circular gauge for the similarity score.
 
     Args:
@@ -24,21 +26,21 @@ def render_similarity_gauge(similarity_percent: float, category: str, cosine_sim
     # Category-specific color schemes
     if category == "High Similarity":
         gradient_start = "#10b981"  # Emerald 500
-        gradient_end = "#06b6d4"    # Cyan 500
+        gradient_end = "#06b6d4"  # Cyan 500
         glow_color = "rgba(16, 185, 129, 0.35)"
         badge_bg = "rgba(16, 185, 129, 0.15)"
         badge_border = "rgba(16, 185, 129, 0.4)"
         badge_text = "#34d399"
     elif category == "Moderate Similarity":
         gradient_start = "#f59e0b"  # Amber 500
-        gradient_end = "#f97316"    # Orange 500
+        gradient_end = "#f97316"  # Orange 500
         glow_color = "rgba(245, 158, 11, 0.35)"
         badge_bg = "rgba(245, 158, 11, 0.15)"
         badge_border = "rgba(245, 158, 11, 0.4)"
         badge_text = "#fbbf24"
     else:
         gradient_start = "#f43f5e"  # Rose 500
-        gradient_end = "#a855f7"    # Purple 500
+        gradient_end = "#a855f7"  # Purple 500
         glow_color = "rgba(244, 63, 94, 0.35)"
         badge_bg = "rgba(244, 63, 94, 0.15)"
         badge_border = "rgba(244, 63, 94, 0.4)"

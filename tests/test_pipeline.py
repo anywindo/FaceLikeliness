@@ -19,7 +19,6 @@ from utils.image import validate_image, create_thumbnail
 from utils.gauge import render_similarity_gauge
 
 
-
 class TestLikelinessPipeline(unittest.TestCase):
     """Test suite covering data models, preprocessing, embedding, and comparison."""
 
