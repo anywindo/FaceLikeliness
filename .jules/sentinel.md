@@ -12,3 +12,7 @@
 **Learning:** Validation constraints must be applied upfront across all input types (NumPy and PIL) before performing compute-intensive transformations. All top-level UI action handlers should capture unexpected errors and present clean messages without exposing backend call stacks.
 **Prevention:** Enforce `image.width * image.height <= max_pixels` on PIL images immediately upon receipt. Wrap comparison and processing handlers in `try/except` and raise sanitized `gr.Error` messages.
 
+## 2026-10-18 - Generic Exception Messaging in Gradio UIs
+**Vulnerability:** A `ValueError` exception generated during image processing was caught and its raw string representation (`str(e)`) was directly exposed in a Gradio UI Markdown element, leading to potential information leakage.
+**Learning:** Returning exception strings directly to user-facing UI elements violates the "Fail securely" principle, as it can expose internal file paths, module structures, or variable values to end users or attackers.
+**Prevention:** Catch expected errors but present generic, sanitized failure messages to the user (e.g., "Invalid image provided"), while keeping the detailed error context inside secure server-side logs using `logger.warning`.
