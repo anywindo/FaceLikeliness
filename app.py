@@ -39,10 +39,12 @@ def process_image(
         faces = detector.detect(image)
     except ValueError as e:
         logger.warning("Validation issue in %s: %s", label, e)
+        # 🛡️ Sentinel: Prevent information leakage. Do not return raw exception
+        # strings to the UI as they can expose internal paths or state.
         return (
             [],
             gr.update(value=None, visible=False),
-            f"⚠️ {str(e)}",
+            "⚠️ Image validation failed. Please provide a valid image.",
         )
     except Exception:
         logger.exception("Error analyzing %s", label)
