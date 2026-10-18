@@ -189,9 +189,25 @@ def reset() -> Tuple[Any, ...]:
     )
 
 
+CUSTOM_CSS = """
+.fixed-image, .fixed-image .image-container, .fixed-image img {
+    max-height: 360px !important;
+    height: 360px !important;
+    object-fit: contain !important;
+}
+.fixed-crop, .fixed-crop .image-container, .fixed-crop img {
+    max-height: 240px !important;
+    height: 240px !important;
+    object-fit: contain !important;
+}
+"""
+
+
 def build_app() -> gr.Blocks:
     """Builds a classic, clean Gradio interface."""
     with gr.Blocks(title="Facial Similarity Comparison") as demo:
+        gr.HTML(f"<style>{CUSTOM_CSS}</style>", visible=False)
+
         gr.Markdown("""
             # 🔍 Facial Similarity Comparison
             Upload two photos to compare facial similarity using **InsightFace (ArcFace)** deep feature embeddings.
@@ -207,26 +223,34 @@ def build_app() -> gr.Blocks:
         with gr.Row():
             with gr.Column():
                 img_a = gr.Image(
-                    label="Photo A", type="numpy", sources=["upload", "clipboard"]
+                    label="Photo A",
+                    type="numpy",
+                    sources=["upload", "clipboard"],
+                    height=360,
+                    elem_classes=["fixed-image"],
                 )
                 status_a = gr.Markdown("")
                 gallery_a = gr.Gallery(
                     label="Detected Faces in Photo A (Click to choose)",
                     columns=4,
-                    height="auto",
+                    height=160,
                     visible=False,
                     interactive=True,
                 )
 
             with gr.Column():
                 img_b = gr.Image(
-                    label="Photo B", type="numpy", sources=["upload", "clipboard"]
+                    label="Photo B",
+                    type="numpy",
+                    sources=["upload", "clipboard"],
+                    height=360,
+                    elem_classes=["fixed-image"],
                 )
                 status_b = gr.Markdown("")
                 gallery_b = gr.Gallery(
                     label="Detected Faces in Photo B (Click to choose)",
                     columns=4,
-                    height="auto",
+                    height=160,
                     visible=False,
                     interactive=True,
                 )
@@ -239,7 +263,12 @@ def build_app() -> gr.Blocks:
         # Output Results Section (revealed after comparison)
         with gr.Row(visible=False) as results_row:
             with gr.Column(scale=1):
-                crop_a = gr.Image(label="Face A (Analyzed Crop)", interactive=False)
+                crop_a = gr.Image(
+                    label="Face A (Analyzed Crop)",
+                    interactive=False,
+                    height=240,
+                    elem_classes=["fixed-crop"],
+                )
 
             with gr.Column(scale=2):
                 score_label = gr.Label(label="Similarity Metric")
@@ -251,7 +280,12 @@ def build_app() -> gr.Blocks:
                 )
 
             with gr.Column(scale=1):
-                crop_b = gr.Image(label="Face B (Analyzed Crop)", interactive=False)
+                crop_b = gr.Image(
+                    label="Face B (Analyzed Crop)",
+                    interactive=False,
+                    height=240,
+                    elem_classes=["fixed-crop"],
+                )
 
         # Classic Information Accordion
         with gr.Accordion("ℹ️ Model Information & Threshold Reference", open=False):
@@ -356,4 +390,4 @@ def build_app() -> gr.Blocks:
 
 if __name__ == "__main__":
     app = build_app()
-    app.launch(share=False)
+    app.launch(share=False, css=CUSTOM_CSS)
