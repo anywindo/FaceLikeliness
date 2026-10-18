@@ -56,23 +56,28 @@ class TestLikelinessPipeline(unittest.TestCase):
             validate_image("/etc/passwd")
 
     def test_pil_image_validation_and_dos_mitigation(self):
-        """Verifies PIL Image validation and DoS prevention for oversized images."""
+        """Verifies PIL Image validation, graceful auto-downscaling, and DoS rejection."""
         # Valid PIL Image
         pil_img = Image.new("RGB", (200, 200), color=(100, 150, 200))
         rgb = validate_image(pil_img)
         self.assertEqual(rgb.shape, (200, 200, 3))
         self.assertEqual(rgb.dtype, np.uint8)
 
-        # Oversized PIL Image (> 16 Megapixels, e.g. 5000x5000 = 25MP)
-        oversized_pil = Image.new("RGB", (5000, 5000))
-        with self.assertRaises(ValueError) as ctx:
-            validate_image(oversized_pil)
-        self.assertIn("exceeds maximum allowed resolution", str(ctx.exception))
+        # High-resolution PIL Image (e.g. 5000x5000 = 25MP) is automatically downscaled to <= 16MP
+        highres_pil = Image.new("RGB", (5000, 5000))
+        rgb_highres = validate_image(highres_pil)
+        self.assertLessEqual(rgb_highres.shape[0] * rgb_highres.shape[1], 16_000_000)
+        self.assertEqual(rgb_highres.dtype, np.uint8)
 
-        # Oversized NumPy array (> 16MP)
-        oversized_arr = np.zeros((4500, 4000, 3), dtype=np.uint8)
+        # High-resolution NumPy array (e.g. 5000x4000 = 20MP) is automatically downscaled to <= 16MP
+        highres_arr = np.zeros((5000, 4000, 3), dtype=np.uint8)
+        rgb_arr_downscaled = validate_image(highres_arr)
+        self.assertLessEqual(rgb_arr_downscaled.shape[0] * rgb_arr_downscaled.shape[1], 16_000_000)
+
+        # Extreme decompression bomb (> 100 Megapixels) raises ValueError
+        bomb_pil = Image.new("RGB", (11000, 10000))
         with self.assertRaises(ValueError) as ctx:
-            validate_image(oversized_arr)
+            validate_image(bomb_pil)
         self.assertIn("exceeds maximum allowed resolution", str(ctx.exception))
 
     def test_compare_exception_handling(self):

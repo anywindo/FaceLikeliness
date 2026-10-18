@@ -37,6 +37,13 @@ def process_image(
 
     try:
         faces = detector.detect(image)
+    except ValueError as e:
+        logger.warning("Validation issue in %s: %s", label, e)
+        return (
+            [],
+            gr.update(value=None, visible=False),
+            f"⚠️ {str(e)}",
+        )
     except Exception:
         logger.exception("Error analyzing %s", label)
         return (
@@ -107,6 +114,14 @@ def compare(
     # prevents Gradio from serializing and re-uploading full high-res image arrays over the network.
     if not status_a or not status_b:
         raise gr.Error("Please upload both Photo A and Photo B before comparing.")
+
+    if "⚠️" in status_a:
+        clean_err = status_a.replace("⚠️", "").strip()
+        raise gr.Error(f"Cannot compare: Photo A has an issue ({clean_err}).")
+
+    if "⚠️" in status_b:
+        clean_err = status_b.replace("⚠️", "").strip()
+        raise gr.Error(f"Cannot compare: Photo B has an issue ({clean_err}).")
 
     if not faces_a:
         raise gr.Error(

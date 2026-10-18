@@ -24,20 +24,32 @@ def validate_image(image: Union[np.ndarray, Image.Image, None]) -> np.ndarray:
     if image is None:
         raise ValueError("No image provided. Please upload an image.")
 
-    # Protect against excessively large images (DoS mitigation)
-    # Limit to 16 Megapixels (e.g., 4000x4000)
-    max_pixels = 4000 * 4000
+    # Hard threshold to prevent memory exhaustion / decompression bomb attacks
+    HARD_MAX_PIXELS = 100_000_000  # 100 Megapixels
+    # Optimal target resolution for face detection (16 Megapixels, approx 4000x4000)
+    # High-resolution smartphone/camera photos (>16MP and <=100MP) are automatically
+    # downscaled to target bounds, preventing Out-Of-Memory while preserving full face detail.
+    TARGET_MAX_PIXELS = 16_000_000
 
     # If image is a PIL Image
     if isinstance(image, Image.Image):
-        if image.width * image.height > max_pixels:
+        pixels = image.width * image.height
+        if pixels > HARD_MAX_PIXELS:
             raise ValueError(
-                f"Image exceeds maximum allowed resolution ({max_pixels} pixels)."
+                f"Image exceeds maximum allowed resolution ({HARD_MAX_PIXELS} pixels)."
             )
 
         try:
             image = ImageOps.exif_transpose(image)
             image = image.convert("RGB")
+            if image.width * image.height > TARGET_MAX_PIXELS:
+                scale = (TARGET_MAX_PIXELS / (image.width * image.height)) ** 0.5
+                new_w = max(1, int(image.width * scale))
+                new_h = max(1, int(image.height * scale))
+                while new_w * new_h > TARGET_MAX_PIXELS:
+                    new_w = max(1, new_w - 1)
+                    new_h = max(1, new_h - 1)
+                image = image.resize((new_w, new_h), Image.Resampling.BILINEAR)
             return np.array(image, dtype=np.uint8)
         except Exception:
             raise ValueError(
@@ -49,9 +61,13 @@ def validate_image(image: Union[np.ndarray, Image.Image, None]) -> np.ndarray:
         if image.size == 0:
             raise ValueError("The provided image is empty.")
 
-        if image.shape[0] * image.shape[1] > max_pixels:
+        if image.ndim < 2:
+            raise ValueError(f"Invalid image array dimensions: {image.ndim}")
+
+        pixels = image.shape[0] * image.shape[1]
+        if pixels > HARD_MAX_PIXELS:
             raise ValueError(
-                f"Image exceeds maximum allowed resolution ({max_pixels} pixels)."
+                f"Image exceeds maximum allowed resolution ({HARD_MAX_PIXELS} pixels)."
             )
 
         # Ensure correct dtype
@@ -78,6 +94,16 @@ def validate_image(image: Union[np.ndarray, Image.Image, None]) -> np.ndarray:
                 raise ValueError(f"Unsupported number of image channels: {image.shape[2]}")
         else:
             raise ValueError(f"Invalid image array dimensions: {image.ndim}")
+
+        # Automatically downscale if exceeding target bounds (e.g. large camera/phone uploads)
+        if pixels > TARGET_MAX_PIXELS:
+            scale = (TARGET_MAX_PIXELS / pixels) ** 0.5
+            new_w = max(1, int(image.shape[1] * scale))
+            new_h = max(1, int(image.shape[0] * scale))
+            while new_w * new_h > TARGET_MAX_PIXELS:
+                new_w = max(1, new_w - 1)
+                new_h = max(1, new_h - 1)
+            image = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
 
         return image
 
