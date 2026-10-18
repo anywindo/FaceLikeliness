@@ -9,3 +9,7 @@
 ## 2026-10-18 - Optimize Gradio Payload States by Emptying Unused Data
 **Learning:** When passing complex objects (like data contracts) into Gradio `gr.State`, unused large attributes (such as image crops or high-res arrays) within those objects get serialized and consume significant payload memory, even if the frontend doesn't need them.
 **Action:** Replace expensive and unused attributes in data contracts with empty arrays (e.g., `np.empty((0,), dtype=np.uint8)`) if they are only needed to preserve the contract. This preserves the schema while eliminating processing time and reducing memory overhead in Gradio state payloads.
+
+## 2026-10-18 - Avoid Unused Aligned Face Crops in InsightFace Pipelines
+**Learning:** Extracting an aligned face crop (`face_align.norm_crop`) from InsightFace requires expensive affine transformations (e.g., `cv2.warpAffine`) and color conversions. When the aligned crop is only kept for completeness (e.g., in a data contract) and never actually used downstream (like in a Gradio app where only thumbnails and embeddings are needed), it wastes CPU cycles and bloats memory/serialization payloads.
+**Action:** Always check if the outputs of expensive vision library functions are actually utilized. If an aligned crop is part of a data contract but unused, set it to an empty array (`np.empty((0,), dtype=np.uint8)`) directly in the detector rather than running the heavy image transformation pipeline.

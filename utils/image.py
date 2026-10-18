@@ -24,25 +24,35 @@ def validate_image(image: Union[np.ndarray, Image.Image, None]) -> np.ndarray:
     if image is None:
         raise ValueError("No image provided. Please upload an image.")
 
+    # Protect against excessively large images (DoS mitigation)
+    # Limit to 16 Megapixels (e.g., 4000x4000)
+    max_pixels = 4000 * 4000
+
     # If image is a PIL Image
     if isinstance(image, Image.Image):
+        if image.width * image.height > max_pixels:
+            raise ValueError(
+                f"Image exceeds maximum allowed resolution ({max_pixels} pixels)."
+            )
+
         try:
             image = ImageOps.exif_transpose(image)
             image = image.convert("RGB")
             return np.array(image, dtype=np.uint8)
-        except Exception as e:
-            raise ValueError("Error processing PIL image. The image format may be unsupported or corrupted.")
+        except Exception:
+            raise ValueError(
+                "Error processing PIL image. The image format may be unsupported or corrupted."
+            )
 
     # If image is a numpy array
     if isinstance(image, np.ndarray):
         if image.size == 0:
             raise ValueError("The provided image is empty.")
 
-        # Protect against excessively large images (DoS mitigation)
-        # Limit to 16 Megapixels (e.g., 4000x4000)
-        max_pixels = 4000 * 4000
         if image.shape[0] * image.shape[1] > max_pixels:
-            raise ValueError(f"Image exceeds maximum allowed resolution ({max_pixels} pixels).")
+            raise ValueError(
+                f"Image exceeds maximum allowed resolution ({max_pixels} pixels)."
+            )
 
         # Ensure correct dtype
         if image.dtype != np.uint8:

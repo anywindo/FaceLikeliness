@@ -63,13 +63,12 @@ class FaceDetector:
             bbox = (x1, y1, x2, y2)
             score = float(face.det_score)
 
-            # Aligned 112x112 face crop (standard ArcFace alignment via 5 landmarks)
-            if hasattr(face, "kps") and face.kps is not None:
-                aligned_bgr = face_align.norm_crop(bgr_image, landmark=face.kps, image_size=112)
-                aligned_rgb = cv2.cvtColor(aligned_bgr, cv2.COLOR_BGR2RGB)
-            else:
-                # Fallback to direct crop if keypoints missing
-                aligned_rgb = create_thumbnail(rgb_image, bbox, target_size=(112, 112), padding=0.0)
+            # ⚡ Bolt Optimization: Avoid expensive and redundant `face_align.norm_crop`
+            # and `cv2.cvtColor` operations. The `aligned_face` attribute is part of the
+            # data contract but is not used downstream (UI uses `thumbnail`, comparator uses
+            # `embedding`). Returning an empty array saves processing time and reduces
+            # memory payload size when storing state in Gradio.
+            aligned_rgb = np.empty((0,), dtype=np.uint8)
 
             # High-res display thumbnail for UI preview and galleries
             thumbnail_rgb = create_thumbnail(rgb_image, bbox, target_size=(256, 256), padding=0.35)

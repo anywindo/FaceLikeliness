@@ -121,7 +121,13 @@ def compare(
     target_a = faces_a[max(0, min(idx_a, len(faces_a) - 1))]
     target_b = faces_b[max(0, min(idx_b, len(faces_b) - 1))]
 
-    result = comparator.compare(target_a, target_b)
+    try:
+        result = comparator.compare(target_a, target_b)
+    except Exception:
+        logger.exception("Error comparing faces")
+        raise gr.Error(
+            "An error occurred during comparison. Please try again with different photos."
+        )
 
     # Standard Gradio Label format with confidence score
     score_fraction = max(0.0, min(1.0, result.similarity_percentage / 100.0))

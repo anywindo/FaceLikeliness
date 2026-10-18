@@ -11,13 +11,16 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from PIL import Image
+from unittest.mock import patch
+import gradio as gr
 from core.models import DetectedFace, ComparisonResult
 from core.detector import FaceDetector
 from core.embedder import FaceEmbedder
 from core.comparator import FaceComparator
 from utils.image import validate_image, create_thumbnail
 from utils.gauge import render_similarity_gauge
-
+import app
 
 
 class TestLikelinessPipeline(unittest.TestCase):
@@ -47,6 +50,51 @@ class TestLikelinessPipeline(unittest.TestCase):
         # None should raise ValueError
         with self.assertRaises(ValueError):
             validate_image(None)
+
+        # Unsupported type (e.g. str / path) should raise ValueError
+        with self.assertRaises(ValueError):
+            validate_image("/etc/passwd")
+
+    def test_pil_image_validation_and_dos_mitigation(self):
+        """Verifies PIL Image validation and DoS prevention for oversized images."""
+        # Valid PIL Image
+        pil_img = Image.new("RGB", (200, 200), color=(100, 150, 200))
+        rgb = validate_image(pil_img)
+        self.assertEqual(rgb.shape, (200, 200, 3))
+        self.assertEqual(rgb.dtype, np.uint8)
+
+        # Oversized PIL Image (> 16 Megapixels, e.g. 5000x5000 = 25MP)
+        oversized_pil = Image.new("RGB", (5000, 5000))
+        with self.assertRaises(ValueError) as ctx:
+            validate_image(oversized_pil)
+        self.assertIn("exceeds maximum allowed resolution", str(ctx.exception))
+
+        # Oversized NumPy array (> 16MP)
+        oversized_arr = np.zeros((4500, 4000, 3), dtype=np.uint8)
+        with self.assertRaises(ValueError) as ctx:
+            validate_image(oversized_arr)
+        self.assertIn("exceeds maximum allowed resolution", str(ctx.exception))
+
+    def test_compare_exception_handling(self):
+        """Verifies that app.compare catches internal errors and returns a generic gr.Error."""
+        dummy_face = DetectedFace(
+            bbox=(0, 0, 10, 10),
+            score=0.99,
+            aligned_face=np.empty((0,), dtype=np.uint8),
+            thumbnail=np.zeros((100, 100, 3), dtype=np.uint8),
+            embedding=np.zeros(512, dtype=np.float32),
+        )
+        with patch.object(app.comparator, "compare", side_effect=RuntimeError("Internal math error")):
+            with self.assertRaises(gr.Error) as ctx:
+                app.compare(
+                    status_a="Photo A ready",
+                    status_b="Photo B ready",
+                    faces_a=[dummy_face],
+                    faces_b=[dummy_face],
+                    idx_a=0,
+                    idx_b=0,
+                )
+            self.assertIn("An error occurred during comparison", str(ctx.exception))
 
     def test_thumbnail_generation(self):
         """Tests padded thumbnail creation bounds and sizing."""
