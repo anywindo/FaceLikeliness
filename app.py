@@ -52,6 +52,11 @@ def process_image(
             f"⚠️ No face detected in {label}. Please upload an image with a visible face.",
         )
 
+    # ⚡ Bolt Optimization: Replace unused aligned_face array with empty array before
+    # storing faces in Gradio gr.State to prevent massive payload bloat over the network.
+    for face in faces:
+        face.aligned_face = np.empty((0,), dtype=np.uint8)
+
     if len(faces) == 1:
         return (
             faces,

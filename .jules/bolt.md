@@ -5,3 +5,7 @@
 ## 2026-10-16 - Prevent Massive Network Payload Bloat on Gradio Image Component Events
 **Learning:** In Gradio applications, passing raw `Image` components as inputs to downstream event handlers (e.g., a "Compare" button click) forces the client to serialize and re-upload the full high-res image over the network every single time the event is triggered, even if the image hasn't changed. This causes significant performance bottlenecks and network payload bloat.
 **Action:** When the raw image data isn't needed by the downstream handler (because the required data, like extracted features or embeddings, is already available via lightweight `gr.State` or other components), replace the `Image` inputs with lightweight state variables (like `gr.State` or short status strings) to act as presence checks without the network overhead.
+
+## 2026-10-18 - Optimize Gradio Payload States by Emptying Unused Data
+**Learning:** When passing complex objects (like data contracts) into Gradio `gr.State`, unused large attributes (such as image crops or high-res arrays) within those objects get serialized and consume significant payload memory, even if the frontend doesn't need them.
+**Action:** Replace expensive and unused attributes in data contracts with empty arrays (e.g., `np.empty((0,), dtype=np.uint8)`) if they are only needed to preserve the contract. This preserves the schema while eliminating processing time and reducing memory overhead in Gradio state payloads.
