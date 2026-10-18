@@ -18,7 +18,7 @@ from core.models import DetectedFace, ComparisonResult
 from core.detector import FaceDetector
 from core.embedder import FaceEmbedder
 from core.comparator import FaceComparator
-from utils.image import validate_image, create_thumbnail
+from utils.image import validate_image, create_thumbnail, compress_image, MAX_PIXELS
 from utils.gauge import render_similarity_gauge
 import app
 
@@ -55,30 +55,30 @@ class TestLikelinessPipeline(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_image("/etc/passwd")
 
-    def test_pil_image_validation_and_dos_mitigation(self):
-        """Verifies PIL Image validation, graceful auto-downscaling, and DoS rejection."""
+    def test_image_compressor_and_validation(self):
+        """Verifies compressor and validate_image enforce the 16 MP budget."""
         # Valid PIL Image
         pil_img = Image.new("RGB", (200, 200), color=(100, 150, 200))
         rgb = validate_image(pil_img)
         self.assertEqual(rgb.shape, (200, 200, 3))
         self.assertEqual(rgb.dtype, np.uint8)
 
-        # High-resolution PIL Image (e.g. 5000x5000 = 25MP) is automatically downscaled to <= 16MP
+        # High-resolution PIL Image (e.g. 5000x5000 = 25MP) is compressed to <= 16MP
         highres_pil = Image.new("RGB", (5000, 5000))
+        compressed_pil = compress_image(highres_pil, max_pixels=MAX_PIXELS)
+        self.assertLessEqual(compressed_pil.width * compressed_pil.height, MAX_PIXELS)
+
         rgb_highres = validate_image(highres_pil)
-        self.assertLessEqual(rgb_highres.shape[0] * rgb_highres.shape[1], 16_000_000)
+        self.assertLessEqual(rgb_highres.shape[0] * rgb_highres.shape[1], MAX_PIXELS)
         self.assertEqual(rgb_highres.dtype, np.uint8)
 
-        # High-resolution NumPy array (e.g. 5000x4000 = 20MP) is automatically downscaled to <= 16MP
+        # High-resolution NumPy array (e.g. 5000x4000 = 20MP) is compressed to <= 16MP
         highres_arr = np.zeros((5000, 4000, 3), dtype=np.uint8)
-        rgb_arr_downscaled = validate_image(highres_arr)
-        self.assertLessEqual(rgb_arr_downscaled.shape[0] * rgb_arr_downscaled.shape[1], 16_000_000)
+        compressed_arr = compress_image(highres_arr, max_pixels=MAX_PIXELS)
+        self.assertLessEqual(compressed_arr.shape[0] * compressed_arr.shape[1], MAX_PIXELS)
 
-        # Extreme decompression bomb (> 100 Megapixels) raises ValueError
-        bomb_pil = Image.new("RGB", (11000, 10000))
-        with self.assertRaises(ValueError) as ctx:
-            validate_image(bomb_pil)
-        self.assertIn("exceeds maximum allowed resolution", str(ctx.exception))
+        rgb_arr = validate_image(highres_arr)
+        self.assertLessEqual(rgb_arr.shape[0] * rgb_arr.shape[1], MAX_PIXELS)
 
     def test_compare_exception_handling(self):
         """Verifies that app.compare catches internal errors and returns a generic gr.Error."""

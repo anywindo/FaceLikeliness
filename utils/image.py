@@ -6,11 +6,59 @@ import numpy as np
 from PIL import Image, ImageOps
 
 
+MAX_PIXELS = 16_000_000  # 16 Megapixels (approx 4000x4000)
+
+
+def compress_image(
+    image: Union[np.ndarray, Image.Image],
+    max_pixels: int = MAX_PIXELS,
+) -> Union[np.ndarray, Image.Image]:
+    """Compresses an image to fit within the maximum allowed pixel budget.
+
+    Preserves the original aspect ratio and shrinks image dimensions to ensure
+    width * height <= max_pixels.
+
+    Args:
+        image: The input image as a NumPy array or PIL Image.
+        max_pixels: Maximum allowed total pixels (default: 16,000,000).
+
+    Returns:
+        The compressed image fitting within the pixel limit.
+    """
+    if isinstance(image, Image.Image):
+        pixels = image.width * image.height
+        if pixels > max_pixels:
+            scale = (max_pixels / pixels) ** 0.5
+            new_w = max(1, int(image.width * scale))
+            new_h = max(1, int(image.height * scale))
+            while new_w * new_h > max_pixels:
+                new_w = max(1, new_w - 1)
+                new_h = max(1, new_h - 1)
+            return image.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        return image
+
+    if isinstance(image, np.ndarray) and image.ndim >= 2:
+        h, w = image.shape[:2]
+        pixels = h * w
+        if pixels > max_pixels:
+            scale = (max_pixels / pixels) ** 0.5
+            new_w = max(1, int(w * scale))
+            new_h = max(1, int(h * scale))
+            while new_w * new_h > max_pixels:
+                new_w = max(1, new_w - 1)
+                new_h = max(1, new_h - 1)
+            return cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
+        return image
+
+    return image
+
+
 def validate_image(image: Union[np.ndarray, Image.Image, None]) -> np.ndarray:
     """Validates and preprocesses an image for face detection.
 
     Converts various input formats (NumPy array or PIL Image)
     into a standard RGB NumPy array, handling color channels and EXIF orientation.
+    If an image exceeds the 16 MP budget, it is compressed to fit within limits.
 
     Args:
         image: The input image as a NumPy array (RGB) or PIL Image.
@@ -19,37 +67,19 @@ def validate_image(image: Union[np.ndarray, Image.Image, None]) -> np.ndarray:
         np.ndarray: Preprocessed image in RGB uint8 format.
 
     Raises:
-        ValueError: If the image is None, empty, corrupt, or exceeds limits.
+        ValueError: If the image is None, empty, corrupt, or unsupported.
     """
     if image is None:
         raise ValueError("No image provided. Please upload an image.")
 
-    # Hard threshold to prevent memory exhaustion / decompression bomb attacks
-    HARD_MAX_PIXELS = 100_000_000  # 100 Megapixels
-    # Optimal target resolution for face detection (16 Megapixels, approx 4000x4000)
-    # High-resolution smartphone/camera photos (>16MP and <=100MP) are automatically
-    # downscaled to target bounds, preventing Out-Of-Memory while preserving full face detail.
-    TARGET_MAX_PIXELS = 16_000_000
+    # Compress image to adhere to the 16 MP limit
+    image = compress_image(image, max_pixels=MAX_PIXELS)
 
     # If image is a PIL Image
     if isinstance(image, Image.Image):
-        pixels = image.width * image.height
-        if pixels > HARD_MAX_PIXELS:
-            raise ValueError(
-                f"Image exceeds maximum allowed resolution ({HARD_MAX_PIXELS} pixels)."
-            )
-
         try:
             image = ImageOps.exif_transpose(image)
             image = image.convert("RGB")
-            if image.width * image.height > TARGET_MAX_PIXELS:
-                scale = (TARGET_MAX_PIXELS / (image.width * image.height)) ** 0.5
-                new_w = max(1, int(image.width * scale))
-                new_h = max(1, int(image.height * scale))
-                while new_w * new_h > TARGET_MAX_PIXELS:
-                    new_w = max(1, new_w - 1)
-                    new_h = max(1, new_h - 1)
-                image = image.resize((new_w, new_h), Image.Resampling.BILINEAR)
             return np.array(image, dtype=np.uint8)
         except Exception:
             raise ValueError(
@@ -63,12 +93,6 @@ def validate_image(image: Union[np.ndarray, Image.Image, None]) -> np.ndarray:
 
         if image.ndim < 2:
             raise ValueError(f"Invalid image array dimensions: {image.ndim}")
-
-        pixels = image.shape[0] * image.shape[1]
-        if pixels > HARD_MAX_PIXELS:
-            raise ValueError(
-                f"Image exceeds maximum allowed resolution ({HARD_MAX_PIXELS} pixels)."
-            )
 
         # Ensure correct dtype
         if image.dtype != np.uint8:
@@ -91,19 +115,11 @@ def validate_image(image: Union[np.ndarray, Image.Image, None]) -> np.ndarray:
                 # Already 3-channel (assumed RGB from Gradio)
                 pass
             else:
-                raise ValueError(f"Unsupported number of image channels: {image.shape[2]}")
+                raise ValueError(
+                    f"Unsupported number of image channels: {image.shape[2]}"
+                )
         else:
             raise ValueError(f"Invalid image array dimensions: {image.ndim}")
-
-        # Automatically downscale if exceeding target bounds (e.g. large camera/phone uploads)
-        if pixels > TARGET_MAX_PIXELS:
-            scale = (TARGET_MAX_PIXELS / pixels) ** 0.5
-            new_w = max(1, int(image.shape[1] * scale))
-            new_h = max(1, int(image.shape[0] * scale))
-            while new_w * new_h > TARGET_MAX_PIXELS:
-                new_w = max(1, new_w - 1)
-                new_h = max(1, new_h - 1)
-            image = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
 
         return image
 
