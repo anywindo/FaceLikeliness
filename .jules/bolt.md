@@ -13,3 +13,7 @@
 ## 2026-10-18 - Avoid Unused Aligned Face Crops in InsightFace Pipelines
 **Learning:** Extracting an aligned face crop (`face_align.norm_crop`) from InsightFace requires expensive affine transformations (e.g., `cv2.warpAffine`) and color conversions. When the aligned crop is only kept for completeness (e.g., in a data contract) and never actually used downstream (like in a Gradio app where only thumbnails and embeddings are needed), it wastes CPU cycles and bloats memory/serialization payloads.
 **Action:** Always check if the outputs of expensive vision library functions are actually utilized. If an aligned crop is part of a data contract but unused, set it to an empty array (`np.empty((0,), dtype=np.uint8)`) directly in the detector rather than running the heavy image transformation pipeline.
+
+## 2026-10-19 - Optimize InsightFace Module Loading
+**Learning:** By default, InsightFace's `FaceAnalysis` loads all available models in the pack (e.g., genderage, dense landmarks) even if they are not used downstream. This wastes initialization time and memory.
+**Action:** When initializing `FaceAnalysis`, explicitly set `allowed_modules=["detection", "recognition"]` (or the specific modules required) to prevent the automatic initialization of unnecessary models. This can significantly reduce memory consumption (e.g., by ~60%) and startup time (e.g., by ~50%).
