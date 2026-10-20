@@ -33,7 +33,14 @@ class FaceDetector:
             providers = ["CoreMLExecutionProvider", "CPUExecutionProvider"]
 
         logger.info(f"Loading InsightFace model '{model_name}' with providers: {providers}")
-        self.app = FaceAnalysis(name=model_name, providers=providers)
+        # ⚡ Bolt Optimization: explicitly restrict loaded modules to avoid initializing unnecessary
+        # models like gender/age or dense landmarks. This significantly reduces initialization time
+        # and memory consumption.
+        self.app = FaceAnalysis(
+            name=model_name,
+            providers=providers,
+            allowed_modules=["detection", "recognition"]
+        )
         self.app.prepare(ctx_id=0, det_size=det_size)
         self.det_size = det_size
 
