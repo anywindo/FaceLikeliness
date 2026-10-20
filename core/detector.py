@@ -32,8 +32,18 @@ class FaceDetector:
         if providers is None:
             providers = ["CoreMLExecutionProvider", "CPUExecutionProvider"]
 
-        logger.info(f"Loading InsightFace model '{model_name}' with providers: {providers}")
-        self.app = FaceAnalysis(name=model_name, providers=providers)
+        logger.info(
+            f"Loading InsightFace model '{model_name}' with providers: {providers}"
+        )
+
+        # ⚡ Bolt Optimization: Explicitly set allowed_modules to prevent the automatic
+        # initialization of unnecessary models (like gender/age or dense landmarks).
+        # This significantly reduces memory consumption and startup time.
+        self.app = FaceAnalysis(
+            name=model_name,
+            providers=providers,
+            allowed_modules=["detection", "recognition"],
+        )
         self.app.prepare(ctx_id=0, det_size=det_size)
         self.det_size = det_size
 
@@ -71,7 +81,9 @@ class FaceDetector:
             aligned_rgb = np.empty((0,), dtype=np.uint8)
 
             # High-res display thumbnail for UI preview and galleries
-            thumbnail_rgb = create_thumbnail(rgb_image, bbox, target_size=(256, 256), padding=0.35)
+            thumbnail_rgb = create_thumbnail(
+                rgb_image, bbox, target_size=(256, 256), padding=0.35
+            )
 
             # Normalized embedding vector
             if hasattr(face, "normed_embedding") and face.normed_embedding is not None:
