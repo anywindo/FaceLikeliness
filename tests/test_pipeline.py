@@ -14,6 +14,15 @@ if str(PROJECT_ROOT) not in sys.path:
 from PIL import Image
 from unittest.mock import patch
 import gradio as gr
+
+# Mock FaceAnalysis before importing anything that instantiates it (like app.py)
+mock_face_analysis = patch("insightface.app.FaceAnalysis")
+mock_face_analysis.start()
+
+# Ensure we stop the mock when testing is done. We can use atexit to stop it after everything since it's global.
+import atexit
+atexit.register(mock_face_analysis.stop)
+
 from core.models import DetectedFace, ComparisonResult
 from core.detector import FaceDetector
 from core.embedder import FaceEmbedder
