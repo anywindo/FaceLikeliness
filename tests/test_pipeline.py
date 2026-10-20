@@ -12,9 +12,19 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from PIL import Image
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 import gradio as gr
 from core.models import DetectedFace, ComparisonResult
+
+# We need to mock FaceAnalysis before importing core.detector and app
+# so we use a mock module for tests in this specific test file scope.
+import sys
+from unittest.mock import MagicMock
+
+sys.modules["insightface.app"] = MagicMock()
+sys.modules["insightface.app.FaceAnalysis"] = MagicMock()
+
+# Now import the modules that depend on it
 from core.detector import FaceDetector
 from core.embedder import FaceEmbedder
 from core.comparator import FaceComparator
@@ -29,6 +39,9 @@ class TestLikelinessPipeline(unittest.TestCase):
     def setUp(self):
         self.embedder = FaceEmbedder()
         self.comparator = FaceComparator()
+
+    def tearDown(self):
+        pass
 
     def test_image_validation_formats(self):
         """Tests that validate_image correctly converts various image formats to RGB uint8."""
@@ -75,7 +88,9 @@ class TestLikelinessPipeline(unittest.TestCase):
         # High-resolution NumPy array (e.g. 5000x4000 = 20MP) is compressed to <= 16MP
         highres_arr = np.zeros((5000, 4000, 3), dtype=np.uint8)
         compressed_arr = compress_image(highres_arr, max_pixels=MAX_PIXELS)
-        self.assertLessEqual(compressed_arr.shape[0] * compressed_arr.shape[1], MAX_PIXELS)
+        self.assertLessEqual(
+            compressed_arr.shape[0] * compressed_arr.shape[1], MAX_PIXELS
+        )
 
         rgb_arr = validate_image(highres_arr)
         self.assertLessEqual(rgb_arr.shape[0] * rgb_arr.shape[1], MAX_PIXELS)
@@ -89,7 +104,9 @@ class TestLikelinessPipeline(unittest.TestCase):
             thumbnail=np.zeros((100, 100, 3), dtype=np.uint8),
             embedding=np.zeros(512, dtype=np.float32),
         )
-        with patch.object(app.comparator, "compare", side_effect=RuntimeError("Internal math error")):
+        with patch.object(
+            app.comparator, "compare", side_effect=RuntimeError("Internal math error")
+        ):
             with self.assertRaises(gr.Error) as ctx:
                 app.compare(
                     status_a="Photo A ready",
