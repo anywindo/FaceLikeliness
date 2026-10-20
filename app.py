@@ -42,7 +42,7 @@ def process_image(
         return (
             [],
             gr.update(value=None, visible=False),
-            f"⚠️ {str(e)}",
+            "⚠️ Image validation failed. Please try a different photo.",
         )
     except Exception:
         logger.exception("Error analyzing %s", label)
